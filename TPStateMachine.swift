@@ -252,8 +252,8 @@ extension TPStateMachine {
     }
     
     private func moveItemAtIndexPath(fromIndex:Int, toIndex: Int) {
-        let fromIndexPath = NSIndexPath(forItem: fromIndex, inSection: 0)
-        let toIndexPath = NSIndexPath(forItem: toIndex, inSection: 0)
+        let fromIndexPath = NSIndexPath(forItem: fromIndex, inSection: self.section)
+        let toIndexPath = NSIndexPath(forItem: toIndex, inSection: self.section)
         self.collectionView?.moveItemAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
         self.tableView?.moveRowAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
     }
@@ -270,3 +270,4 @@ extension TPStateMachine {
     }
 
 }
+
