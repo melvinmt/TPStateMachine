@@ -19,25 +19,27 @@ class ViewController : UIViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
+    // Attach a collection or table view to the state machine.
     state.collectionView = collectionView
     // or: state.tableView = tableView
-    state.section = 0 // Use separate state machines for each section.
-    // optional for tableViews: state.rowAnimation = UITableViewRowAnimation.Middle
-    
+    // also optional for tableViews: state.rowAnimation = UITableViewRowAnimation.Middle
+
+    state.section = 0 // Default: 0, make sure to use separate state machines for each section.
+
     let users = viewModel.getUsers()
-    state.setItems(users)
+    state.setItems(users) // -> calls reloadData()
   }
   
   func insertUser(user:User) {
-    state.insertItem(user, atIndex: 0)
+    state.insertItem(user, atIndex: 0) // -> calls insertItemsAtIndexPaths() call
   }
   
   func updateUser(user:User) {
-    state.updateItem(user)
+    state.updateItem(user) // -> calls reloadItemsAtIndexPaths()
   }
   
   func removeUser(user:User) {
-    state.removeItem(user)
+    state.removeItem(user) // -> calls deleteItemsAtIndexPaths()
   }
 }
 
@@ -61,3 +63,4 @@ extension ViewController : UICollectionViewDelegate {
 }
 
 ```
+You can find more handy functions in the file itself.
