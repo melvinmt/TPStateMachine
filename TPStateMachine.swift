@@ -51,12 +51,10 @@ extension TPStateMachine {
     }
     
     func insertItem(item:AnyObject, atIndex index: Int) {
-        serialOperation {
+        mainThread {
             if index == 0 || index < self.items.count {
-                self.mainThread {
-                    self.items.insert(item, atIndex: index)
-                    self.insertItemsAtIndexPaths([index])
-                }
+                self.items.insert(item, atIndex: index)
+                self.insertItemsAtIndexPaths([index])
             } else {
                 NSLog("index out of bounds: %d", index)
             }
@@ -70,7 +68,6 @@ extension TPStateMachine {
         }
     }
     
-    // Slightly slower because it needs to do a lookup first.
     func updateItem(item:AnyObject) {
         mainThread {
             if let index = self.indexForItem(item) {
@@ -93,7 +90,6 @@ extension TPStateMachine {
         }
     }
 
-    // Slightly slower because it needs to do a lookup first.
     func removeItem(item:AnyObject) {
         mainThread {
             if let index = self.indexForItem(item) {
@@ -105,13 +101,56 @@ extension TPStateMachine {
         }
     }
 
-    func removeItem(item:AnyObject, atIndex index:Int) {
+    func removeItemAtIndex(index:Int) {
         mainThread {
             if index < self.items.count {
                 self.items.removeAtIndex(index)
                 self.removeItemsAtIndexPaths([index])
             } else {
                 NSLog("index out of bounds: %d", index)
+            }
+        }
+    }
+    
+    func moveItemFromIndex(fromIndex:Int, toIndex: Int) {
+        mainThread {
+            if fromIndex < self.items.count && toIndex < self.items.count {
+                if fromIndex == toIndex {
+                    return
+                }
+                if let item = self.itemForIndex(fromIndex) {
+                    self.items.removeAtIndex(fromIndex)
+                    self.items.insert(item, atIndex: toIndex)
+                    self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+                }
+            }
+        }
+    }
+    
+    func moveUpdatedItem(updatedItem:AnyObject, toIndex: Int) {
+        mainThread {
+            if toIndex < self.items.count {
+                if let fromIndex = self.indexForItem(updatedItem) {
+                    if fromIndex == toIndex {
+                        return
+                    }
+                    self.items.removeAtIndex(fromIndex)
+                    self.items.insert(updatedItem, atIndex: toIndex)
+                    self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+                }
+            }
+        }
+    }
+    
+    func moveUpdatedItem(updatedItem:AnyObject, fromIndex: Int, toIndex: Int) {
+        if fromIndex == toIndex {
+            return
+        }
+        mainThread {
+            if fromIndex < self.items.count && toIndex < self.items.count {
+                self.items.removeAtIndex(fromIndex)
+                self.items.insert(updatedItem, atIndex: toIndex)
+                self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
             }
         }
     }
@@ -191,6 +230,13 @@ extension TPStateMachine {
         let indexPaths = self.indexPathsForIndexes(indexes)
         self.collectionView?.reloadItemsAtIndexPaths(indexPaths)
         self.tableView?.reloadRowsAtIndexPaths(indexPaths, withRowAnimation: self.rowAnimation)
+    }
+    
+    private func moveItemAtIndexPath(fromIndex:Int, toIndex: Int) {
+        let fromIndexPath = NSIndexPath(forItem: fromIndex, inSection: 0)
+        let toIndexPath = NSIndexPath(forItem: toIndex, inSection: 0)
+        self.collectionView?.moveItemAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
+        self.tableView?.moveRowAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
     }
     
     private func removeItemsAtIndexPaths(indexes:[Int]) {
