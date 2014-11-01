@@ -1,7 +1,9 @@
 TPStateMachine
 ==============
 
-State machine for dynamic `UICollectionViews`/`UITableViews`. No more `NSInternalInconsistencyException`!
+State machine for highly dynamic `UICollectionView`/`UITableView`. No more `NSInternalInconsistencyException` when you try to change your data from concurrent threads!
+
+The state machine ensures that every change to your data model is matched perfectly with your collection/table views by handling them at the same time in the main thread (or in a serial queue when needed).
 
 # Installation
 
