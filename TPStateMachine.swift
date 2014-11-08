@@ -25,6 +25,16 @@
 
 import Foundation
 
+typealias TPStateMachineCompletionHandler = () -> ()
+
+protocol TPStateMachineDelegate : class {
+    func didInsertItemsAtIndexPaths(indexPaths:[NSIndexPath])
+    func didReloadItemsAtIndexPaths(indexPaths:[NSIndexPath])
+    func didMoveItemAtIndexPath(fromIndexPath:NSIndexPath, toIndexPath: NSIndexPath)
+    func didRemoveItemsAtIndexPaths(indexPaths:[NSIndexPath])
+    func didReloadData()
+}
+
 class TPStateMachine : NSObject {
     
     // Public
@@ -38,9 +48,11 @@ class TPStateMachine : NSObject {
             self.tableView?.reloadData()
         }
     }
+    weak var delegate : TPStateMachineDelegate?
     var section = 0 // Use a separate state machine for each section.
     var rowAnimation = UITableViewRowAnimation.None
-
+    var delayBetweenStates : NSTimeInterval = 0
+    
     // Private
     private var items = [AnyObject]()
     let serialQueue = NSOperationQueue()
@@ -56,121 +68,172 @@ class TPStateMachine : NSObject {
 extension TPStateMachine {
 
     func setItems(items:[AnyObject]) {
-        mainThread {
-            self.items = items
-            self.reloadData()
+        self.setItems(items, completionHandler:nil)
+    }
+    
+    func setItems(items:[AnyObject], completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                self.items = items
+                self.reloadData()
+                completionHandler?()
+            }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
     func clearItems() {
-        mainThread {
-            self.items = [AnyObject]()
-            self.reloadData()
+        self.clearItems(nil)
+    }
+    
+    func clearItems(completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                self.items = [AnyObject]()
+                self.reloadData()
+                completionHandler?()
+            }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
     func insertItem(item:AnyObject, atIndex index: Int) {
-        mainThread {
-            if index == 0 || index < self.items.count {
-                self.items.insert(item, atIndex: index)
-                self.insertItemsAtIndexPaths([index])
-            } else {
-                NSLog("index out of bounds: %d", index)
+        self.insertItem(item, atIndex:index) {}
+    }
+    
+    func insertItem(item:AnyObject, atIndex index:Int, completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                if index <= self.items.count {
+                    self.items.insert(item, atIndex: index)
+                    self.insertItemsAtIndexPaths([index])
+                    completionHandler?()
+                } else {
+                    NSLog("index out of bounds: %d", index)
+                }
             }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
     func appendItem(item:AnyObject) {
-        mainThread {
-            self.items.append(item)
-            self.insertItemsAtIndexPaths([self.items.count - 1])
+        self.appendItem(item, completionHandler:nil)
+    }
+    
+    func appendItem(item:AnyObject, completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                self.items.append(item)
+                self.insertItemsAtIndexPaths([self.items.count - 1])
+                completionHandler?()
+            }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
-    func updateItem(item:AnyObject) {
-        mainThread {
-            if let index = self.indexForItem(item) {
-                self.items[index] = item
-                self.reloadItemsAtIndexPaths([index])
-            } else {
-                NSLog("item not found")
-            }
-        }
-    }
-
     func updateItem(item:AnyObject, atIndex index:Int) {
-        mainThread {
-            if index < self.items.count {
-                self.items[index] = item
-                self.reloadItemsAtIndexPaths([index])
-            } else {
-                NSLog("index out of bounds: %d", index)
-            }
-        }
+        self.updateItem(item, atIndex:index, completionHandler:nil)
     }
 
-    func removeItem(item:AnyObject) {
-        mainThread {
-            if let index = self.indexForItem(item) {
-                self.items.removeAtIndex(index)
-                self.removeItemsAtIndexPaths([index])
-            } else {
-                NSLog("item not found")
+    
+    func updateItem(item:AnyObject, atIndex index:Int, completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                if index < self.items.count {
+                    self.items[index] = item
+                    self.reloadItemsAtIndexPaths([index])
+                    completionHandler?()
+                } else {
+                    NSLog("index out of bounds: %d", index)
+                }
             }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
 
     func removeItemAtIndex(index:Int) {
-        mainThread {
-            if index < self.items.count {
-                self.items.removeAtIndex(index)
-                self.removeItemsAtIndexPaths([index])
-            } else {
-                NSLog("index out of bounds: %d", index)
+        self.removeItemAtIndex(index, completionHandler:nil)
+    }
+    
+    func removeItemAtIndex(index:Int, completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                if index < self.items.count {
+                    self.items.removeAtIndex(index)
+                    self.removeItemsAtIndexPaths([index])
+                    completionHandler?()
+                } else {
+                    NSLog("index out of bounds: %d", index)
+                }
             }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
     func moveItemFromIndex(fromIndex:Int, toIndex: Int) {
-        mainThread {
-            if fromIndex < self.items.count && toIndex < self.items.count {
-                if fromIndex == toIndex {
-                    return
-                }
-                if let item = self.itemForIndex(fromIndex) {
-                    self.items.removeAtIndex(fromIndex)
-                    self.items.insert(item, atIndex: toIndex)
-                    self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+        self.moveItemFromIndex(fromIndex, toIndex:toIndex, completionHandler:nil)
+    }
+
+    func moveItemFromIndex(fromIndex:Int, toIndex: Int, completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                if fromIndex < self.items.count && toIndex < self.items.count {
+                    if fromIndex == toIndex {
+                        return
+                    }
+                    if let item = self.itemForIndex(fromIndex) {
+                        self.items.removeAtIndex(fromIndex)
+                        self.items.insert(item, atIndex: toIndex)
+                        self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+                        completionHandler?()
+                    }
                 }
             }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
     func moveUpdatedItem(updatedItem:AnyObject, toIndex: Int) {
-        mainThread {
-            if toIndex < self.items.count {
-                if let fromIndex = self.indexForItem(updatedItem) {
-                    if fromIndex == toIndex {
-                        return
+        self.moveUpdatedItem(updatedItem, toIndex:toIndex, completionHandler:nil)
+    }
+    
+    func moveUpdatedItem(updatedItem:AnyObject, toIndex: Int, completionHandler:TPStateMachineCompletionHandler?) {
+        serialOperation {
+            self.mainThread {
+                if toIndex < self.items.count {
+                    if let fromIndex = self.indexForItem(updatedItem) {
+                        if fromIndex == toIndex {
+                            return
+                        }
+                        self.items.removeAtIndex(fromIndex)
+                        self.items.insert(updatedItem, atIndex: toIndex)
+                        self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+                        completionHandler?()
                     }
-                    self.items.removeAtIndex(fromIndex)
-                    self.items.insert(updatedItem, atIndex: toIndex)
-                    self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
                 }
             }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
     
     func moveUpdatedItem(updatedItem:AnyObject, fromIndex: Int, toIndex: Int) {
+        self.moveUpdatedItem(updatedItem, fromIndex: fromIndex, toIndex: toIndex, completionHandler:nil)
+    }
+
+    func moveUpdatedItem(updatedItem:AnyObject, fromIndex: Int, toIndex: Int, completionHandler:TPStateMachineCompletionHandler?) {
         if fromIndex == toIndex {
             return
         }
-        mainThread {
-            if fromIndex < self.items.count && toIndex < self.items.count {
-                self.items.removeAtIndex(fromIndex)
-                self.items.insert(updatedItem, atIndex: toIndex)
-                self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+        serialOperation {
+            self.mainThread {
+                if fromIndex < self.items.count && toIndex < self.items.count {
+                    self.items.removeAtIndex(fromIndex)
+                    self.items.insert(updatedItem, atIndex: toIndex)
+                    self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
+                    completionHandler?()
+                }
             }
+            NSThread.sleepForTimeInterval(self.delayBetweenStates)
         }
     }
 
@@ -241,33 +304,47 @@ extension TPStateMachine {
 
     private func insertItemsAtIndexPaths(indexes:[Int]) {
         let indexPaths = self.indexPathsForIndexes(indexes)
+
         self.collectionView?.insertItemsAtIndexPaths(indexPaths)
         self.tableView?.insertRowsAtIndexPaths(indexPaths, withRowAnimation: self.rowAnimation)
+
+        self.delegate?.didInsertItemsAtIndexPaths(indexPaths)
     }
 
     private func reloadItemsAtIndexPaths(indexes:[Int]) {
         let indexPaths = self.indexPathsForIndexes(indexes)
+
         self.collectionView?.reloadItemsAtIndexPaths(indexPaths)
         self.tableView?.reloadRowsAtIndexPaths(indexPaths, withRowAnimation: self.rowAnimation)
+
+        self.delegate?.didReloadItemsAtIndexPaths(indexPaths)
     }
     
     private func moveItemAtIndexPath(fromIndex:Int, toIndex: Int) {
         let fromIndexPath = NSIndexPath(forItem: fromIndex, inSection: self.section)
         let toIndexPath = NSIndexPath(forItem: toIndex, inSection: self.section)
+
         self.collectionView?.moveItemAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
         self.tableView?.moveRowAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
+
+        self.delegate?.didMoveItemAtIndexPath(fromIndexPath, toIndexPath: toIndexPath)
     }
     
     private func removeItemsAtIndexPaths(indexes:[Int]) {
         let indexPaths = self.indexPathsForIndexes(indexes)
+        
         self.collectionView?.deleteItemsAtIndexPaths(indexPaths)
         self.tableView?.deleteRowsAtIndexPaths(indexPaths, withRowAnimation: self.rowAnimation)
+        
+        self.delegate?.didRemoveItemsAtIndexPaths(indexPaths)
     }
     
     private func reloadData() {
         self.collectionView?.reloadData()
         self.tableView?.reloadData()
+        self.delegate?.didReloadData()
     }
 
 }
+
 
