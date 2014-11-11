@@ -36,12 +36,12 @@ class ViewController : UIViewController {
     } 
   }
   
-  func updateUser(user:User) {
-    state.updateItem(user) // -> calls reloadItemsAtIndexPaths()
+  func updateUser(user:User, atIndex index: Int) {
+    state.updateItem(user, atIndex:index) // -> calls reloadItemsAtIndexPaths()
   }
   
-  func removeUser(user:User) {
-    state.removeItem(user) // -> calls deleteItemsAtIndexPaths()
+  func removeUser(user:User, atIndex index:Int) {
+    state.removeItem(user, atIndex:index) // -> calls deleteItemsAtIndexPaths()
   }
 }
 
