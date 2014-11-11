@@ -52,7 +52,7 @@ extension ViewController : UICollectionViewDelegate {
   func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
     let cell = collectionView.dequeueReusableCellWithReuseIdentifier("userCell", forIndexPath: indexPath) as UICollectionViewCell
     
-    if let user = state.itemForIndex(indexPath.row) as? User {
+    if let user = state.itemAtIndex(indexPath.row) as? User {
       let nameLabel = cell.viewWithTag(0) as UILabel
       nameLabel.text = user.name
     }
