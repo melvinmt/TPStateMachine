@@ -181,7 +181,7 @@ extension TPStateMachine {
                     if fromIndex == toIndex {
                         return
                     }
-                    if let item = self.itemForIndex(fromIndex) {
+                    if let item = self.itemAtIndex(fromIndex) {
                         self.items.removeAtIndex(fromIndex)
                         self.items.insert(item, atIndex: toIndex)
                         self.moveItemAtIndexPath(fromIndex, toIndex: toIndex)
@@ -246,7 +246,7 @@ extension TPStateMachine {
         return self.items.count
     }
     
-    func itemForIndex(index:Int) -> AnyObject? {
+    func itemAtIndex(index:Int) -> AnyObject? {
         if index < self.items.count {
             return self.items[index]
         } else {
