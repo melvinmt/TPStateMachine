@@ -31,7 +31,9 @@ class ViewController : UIViewController {
   }
   
   func insertUser(user:User) {
-    state.insertItem(user, atIndex: 0) // -> calls insertItemsAtIndexPaths() call
+    state.insertItem(user, atIndex: 0) { // -> calls insertItemsAtIndexPaths()
+      // This is a callback to do something after items are inserted.
+    } 
   }
   
   func updateUser(user:User) {
